@@ -8,8 +8,8 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
+import hudson.util.Secret;
 import io.thundra.foresight.exceptions.AgentNotFoundException;
-import io.thundra.foresight.exceptions.PluginNotFoundException;
 import io.thundra.plugin.maven.test.instrumentation.checker.FailsafeChecker;
 import io.thundra.plugin.maven.test.instrumentation.checker.SurefireChecker;
 import jenkins.tasks.SimpleBuildStep;
@@ -21,7 +21,6 @@ import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
-
 
 import javax.xml.stream.XMLStreamException;
 import java.io.File;
@@ -35,11 +34,11 @@ public class MvnForesightBuilder extends Builder implements SimpleBuildStep {
 
     private static final Logger logger = LogManager.getLogger(MvnForesightBuilder.class);
     private final String projectId;
-    private final String apiKey;
+    private final Secret apiKey;
     private String thundraAgentVersion;
 
     @DataBoundConstructor
-    public MvnForesightBuilder(String projectId, String apiKey) {
+    public MvnForesightBuilder(String projectId, Secret apiKey) {
         this.apiKey = apiKey;
         this.projectId = projectId;
     }
@@ -48,7 +47,7 @@ public class MvnForesightBuilder extends Builder implements SimpleBuildStep {
         return projectId;
     }
 
-    public String getApiKey() {
+    public Secret getApiKey() {
         return apiKey;
     }
 
@@ -68,8 +67,8 @@ public class MvnForesightBuilder extends Builder implements SimpleBuildStep {
             FilePath filePath = ThundraUtils.downloadThundraAgent(workspace, version);
             String agentConfigurations = getAgentConfigurations(filePath.toString());
             FilePath[] pomFiles = workspace.list("**/pom.xml");
-            listener.getLogger().println("<Execute> Executing maven instrumentation ...");
-            listener.getLogger().printf("<Execute> Found %s pom.xml files%n", pomFiles.length);
+            listener.getLogger().println("Executing maven instrumentation ...");
+            listener.getLogger().printf("Found %s pom.xml files%n", pomFiles.length);
             MavenXpp3Reader mavenReader = new MavenXpp3Reader();
 
             SurefireChecker surefireChecker = new SurefireChecker();
@@ -79,7 +78,7 @@ public class MvnForesightBuilder extends Builder implements SimpleBuildStep {
             AtomicBoolean surefireInstrumented = new AtomicBoolean();
             AtomicBoolean failsafeInstrumented = new AtomicBoolean();
 
-            listener.getLogger().println("<Execute> Processing the pom files");
+            listener.getLogger().println("Processing the pom files");
             for (FilePath pomFile : pomFiles) {
                 listener.getLogger().printf("Processing %s%n", pomFile);
 
@@ -104,7 +103,7 @@ public class MvnForesightBuilder extends Builder implements SimpleBuildStep {
                 try (FileInputStream in = new FileInputStream(localPom)) {
                     IOUtils.copy(in, pomFile.write());
                 }
-                localPom.delete();
+                boolean ignored = localPom.delete(); // For Jenkins Checkstyle workaround 'RV_RETURN_VALUE_IGNORED_BAD_PRACTICE' is preventing successful build
             }
 
             listener.getLogger().println("Instrumentation is complete");
@@ -121,7 +120,7 @@ public class MvnForesightBuilder extends Builder implements SimpleBuildStep {
                 + thundraUrl : "";
         agentPath = agentPath + restBaseUrlParam;
         agentPath += (String.format(" -Dthundra.apiKey=%s -Dthundra.agent.test.project.id=%s" +
-                " -Dthundra.agent.test.run.id=%s", apiKey, projectId, UUID.randomUUID().toString()));
+                " -Dthundra.agent.test.run.id=%s", apiKey.getPlainText(), projectId, UUID.randomUUID().toString()));
 
         return agentPath;
     }
