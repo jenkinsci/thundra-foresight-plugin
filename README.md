@@ -28,7 +28,9 @@ Foresight's plugin automatically detects which runtime you have. Learn more abou
 To install Foresight plugin, go to the Plugin Manager and search for “Thundra Foresight Plugin” and install the plugin.
 ![alt text](images/plugin_install.jpg "Plugin Install")
 
-After installing the plugin, select the project you want to enable Thundra Foresight, or create a new project.
+After installing the plugin, create a global credential for Thundra Foresight Api Key with type Secret Text. Credential creation documentation is [here](https://www.jenkins.io/doc/book/using/using-credentials/#:~:text=From%20the%20Jenkins%20home%20page,Add%20Credentials%20on%20the%20left.)
+
+After creating the secret, select the project you want to enable Thundra Foresight, or create a new project.
 
 Go to the Configurations, and select the **Build Environment** section. Add a build step and select Foresight plugin
 
@@ -46,9 +48,9 @@ Enter your Foresight configurations ProjectId and API Key on the **Build Environ
 
 **For the pipeline projects we can simply add those steps to enable the plugin:**
 
-`mavenForesight(projectId:'<Your-Project-Id>', apiKey: '<Your-Project-Id>')`
+`mavenForesight(projectId:'<Your-Project-Id>', credentialId: '<Your-Credentials-Id>')`
 
-`gradleForesight(projectId:'<Your-Project-Id>', apiKey: '<Your-Project-Id>')`
+`gradleForesight(projectId:'<Your-Project-Id>', credentialId: '<Your-Credentials-Id>')`
 
 ![alt text](images/pipeline.jpg "Pipeline")
 

@@ -3,8 +3,8 @@
     <f:entry title="${%ProjectId}" field="projectId">
         <f:textbox />
     </f:entry>
-    <f:entry title="${%ApiKey}" field="apiKey">
-        <f:password />
+    <f:entry title="${%ApiKey}" field="credentialId">
+        <f:select />
     </f:entry>
     <f:advanced>
         <f:entry title="${%ThundraAgentVersion}" field="thundraAgentVersion"

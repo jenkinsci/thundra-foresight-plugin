@@ -1,5 +1,13 @@
 package io.thundra.foresight;
 
+import com.cloudbees.plugins.credentials.Credentials;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardCredentials;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
@@ -8,23 +16,32 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.AbstractProject;
+import hudson.model.Item;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
+import hudson.util.ListBoxModel;
 import hudson.util.Secret;
 import io.thundra.foresight.exceptions.AgentNotFoundException;
 import io.thundra.foresight.exceptions.PluginNotFoundException;
+import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
+import org.jenkinsci.plugins.plaincredentials.StringCredentials;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
 
 import javax.xml.stream.XMLStreamException;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class GradleForesightBuilder extends Builder implements SimpleBuildStep {
@@ -35,13 +52,13 @@ public class GradleForesightBuilder extends Builder implements SimpleBuildStep {
     public static final String THUNDRA_AGENT_TEST_PROJECT_ID = "THUNDRA_AGENT_TEST_PROJECT_ID";
     public static final String THUNDRA_APIKEY = "THUNDRA_APIKEY";
     private final String projectId;
-    private final Secret apiKey;
+    private final String credentialId;
     private String thundraGradlePluginVersion;
     private String thundraAgentVersion;
 
     @DataBoundConstructor
-    public GradleForesightBuilder(String projectId, Secret apiKey) {
-        this.apiKey = apiKey;
+    public GradleForesightBuilder(String projectId, String credentialId) {
+        this.credentialId = credentialId;
         this.projectId = projectId;
     }
 
@@ -49,8 +66,8 @@ public class GradleForesightBuilder extends Builder implements SimpleBuildStep {
         return projectId;
     }
 
-    public Secret getApiKey() {
-        return apiKey;
+    public String getCredentialId() {
+        return credentialId;
     }
 
     public String getThundraGradlePluginVersion() {
@@ -75,8 +92,12 @@ public class GradleForesightBuilder extends Builder implements SimpleBuildStep {
     public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException {
         try {
             listener.getLogger().println("GradleForesight");
-            if (StringUtils.isEmpty(apiKey.getPlainText()) || StringUtils.isEmpty(projectId)) {
-                return;
+            if (StringUtils.isEmpty(credentialId) || StringUtils.isEmpty(projectId)) {
+                throw new IOException("Required parameters are missing");
+            }
+            StringCredentials apiKeyCredentials = CredentialsProvider.findCredentialById(credentialId, StringCredentials.class, run);
+            if (apiKeyCredentials == null) {
+                throw new IOException("Wrong credentials provided");
             }
             String version = null;
 
@@ -86,11 +107,10 @@ public class GradleForesightBuilder extends Builder implements SimpleBuildStep {
             String pluginVersion = StringUtils.isNotEmpty(thundraGradlePluginVersion) ? thundraGradlePluginVersion : ThundraUtils.getLatestPluginVersion();
             listener.getLogger().println("Latest Plugin Version : " + pluginVersion);
             final Configuration cfg = getFreemarkerConfiguration();
-
             final Map<String, String> root = new HashMap<>();
             root.put(THUNDRA_GRADLE_PLUGIN_VERSION, pluginVersion);
             root.put(THUNDRA_AGENT_PATH, filePath.toString());
-            root.put(THUNDRA_APIKEY, apiKey.getPlainText());
+            root.put(THUNDRA_APIKEY, apiKeyCredentials.getSecret().getPlainText());
             root.put(THUNDRA_AGENT_TEST_PROJECT_ID, projectId);
             String initScriptFile = "thundra.gradle";
             final Template template = cfg.getTemplate(THUNDRAINIT_FTLH);
@@ -139,6 +159,23 @@ public class GradleForesightBuilder extends Builder implements SimpleBuildStep {
         @Override
         public String getDisplayName() {
             return Messages.GradleForesightBuilder_DescriptorImpl_DisplayName();
+        }
+
+        public ListBoxModel doFillCredentialIdItems(
+                @AncestorInPath Item item
+        ) {
+            List<DomainRequirement> domainRequirements = Collections.emptyList();
+            return new StandardListBoxModel()
+                    .includeEmptyValue()
+                    .includeMatchingAs(
+                            ACL.SYSTEM,
+                            item,
+                            StandardCredentials.class,
+                            domainRequirements,
+                            CredentialsMatchers.anyOf(
+                                    CredentialsMatchers.instanceOf(StringCredentials.class)
+                            )
+                    );
         }
 
     }
