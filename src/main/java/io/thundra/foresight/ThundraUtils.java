@@ -1,10 +1,22 @@
 package io.thundra.foresight;
 
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardCredentials;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import hudson.FilePath;
+import hudson.model.Item;
+import hudson.security.ACL;
+import hudson.util.ListBoxModel;
 import io.thundra.foresight.exceptions.AgentNotFoundException;
 import io.thundra.foresight.exceptions.PluginNotFoundException;
+import jenkins.model.Jenkins;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.plugins.plaincredentials.StringCredentials;
+import org.kohsuke.stapler.AncestorInPath;
+import org.kohsuke.stapler.QueryParameter;
 
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
@@ -18,6 +30,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Collections;
+import java.util.List;
 
 public class ThundraUtils {
     public static final String GRADLE_PLUGIN_METADATA =
@@ -74,5 +88,30 @@ public class ThundraUtils {
         IOUtils.copy(agentStream, agent.write());
         return agent;
 
+    }
+
+    public static ListBoxModel fillCredentials(Item item, String selectedId) {
+        if (item == null) {
+            if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
+                return new StandardListBoxModel().includeCurrentValue(selectedId);
+            }
+        } else {
+            if (!item.hasPermission(Item.EXTENDED_READ)
+                    && !item.hasPermission(CredentialsProvider.USE_ITEM)) {
+                return new StandardListBoxModel().includeCurrentValue(selectedId);
+            }
+        }
+        List<DomainRequirement> domainRequirements = Collections.emptyList();
+        return new StandardListBoxModel()
+                .includeEmptyValue()
+                .includeMatchingAs(
+                        ACL.SYSTEM,
+                        item,
+                        StandardCredentials.class,
+                        domainRequirements,
+                        CredentialsMatchers.anyOf(
+                                CredentialsMatchers.instanceOf(StringCredentials.class)
+                        )
+                );
     }
 }

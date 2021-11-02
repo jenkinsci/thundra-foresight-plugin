@@ -20,6 +20,7 @@ import hudson.util.Secret;
 import io.thundra.foresight.exceptions.AgentNotFoundException;
 import io.thundra.plugin.maven.test.instrumentation.checker.FailsafeChecker;
 import io.thundra.plugin.maven.test.instrumentation.checker.SurefireChecker;
+import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -31,6 +32,7 @@ import org.jenkinsci.plugins.plaincredentials.StringCredentials;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
+import org.kohsuke.stapler.QueryParameter;
 
 import javax.xml.stream.XMLStreamException;
 import java.io.File;
@@ -156,20 +158,10 @@ public class MvnForesightBuilder extends Builder implements SimpleBuildStep {
         }
 
         public ListBoxModel doFillCredentialIdItems(
-                @AncestorInPath Item item
+                @AncestorInPath Item item,
+                @QueryParameter String credentialsId
         ) {
-            List<DomainRequirement> domainRequirements = Collections.emptyList();
-            return new StandardListBoxModel()
-                    .includeEmptyValue()
-                    .includeMatchingAs(
-                            ACL.SYSTEM,
-                            item,
-                            StandardCredentials.class,
-                            domainRequirements,
-                            CredentialsMatchers.anyOf(
-                                    CredentialsMatchers.instanceOf(StringCredentials.class)
-                            )
-                    );
+            return ThundraUtils.fillCredentials(item, credentialsId);
         }
 
     }

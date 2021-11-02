@@ -1,13 +1,6 @@
 package io.thundra.foresight;
 
-import com.cloudbees.plugins.credentials.Credentials;
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardCredentials;
-import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
-import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
-import com.cloudbees.plugins.credentials.domains.DomainRequirement;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
@@ -19,14 +12,11 @@ import hudson.model.AbstractProject;
 import hudson.model.Item;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import hudson.security.ACL;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.ListBoxModel;
-import hudson.util.Secret;
 import io.thundra.foresight.exceptions.AgentNotFoundException;
 import io.thundra.foresight.exceptions.PluginNotFoundException;
-import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
@@ -39,9 +29,7 @@ import org.kohsuke.stapler.QueryParameter;
 import javax.xml.stream.XMLStreamException;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class GradleForesightBuilder extends Builder implements SimpleBuildStep {
@@ -162,20 +150,10 @@ public class GradleForesightBuilder extends Builder implements SimpleBuildStep {
         }
 
         public ListBoxModel doFillCredentialIdItems(
-                @AncestorInPath Item item
+                @AncestorInPath Item item,
+                @QueryParameter String credentialsId
         ) {
-            List<DomainRequirement> domainRequirements = Collections.emptyList();
-            return new StandardListBoxModel()
-                    .includeEmptyValue()
-                    .includeMatchingAs(
-                            ACL.SYSTEM,
-                            item,
-                            StandardCredentials.class,
-                            domainRequirements,
-                            CredentialsMatchers.anyOf(
-                                    CredentialsMatchers.instanceOf(StringCredentials.class)
-                            )
-                    );
+            return ThundraUtils.fillCredentials(item, credentialsId);
         }
 
     }
