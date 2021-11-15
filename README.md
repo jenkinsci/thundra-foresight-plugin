@@ -4,7 +4,7 @@
 
 Foresight’s Jenkins Plugin automatically changes your build configurations to integrate with Thundra Foresight.
 
-You can integrate your Jenkins pipeline in just X steps. <<<->>>. After completing those steps, Foresight will capture your test runs automatically.
+You can integrate your Jenkins pipeline in just 2 steps. After completing those steps, Foresight will capture your test runs automatically.
 
 Learn more about What is Foresight and the Benefits of Using Foresight in your Jenkins Pipeline.
 
