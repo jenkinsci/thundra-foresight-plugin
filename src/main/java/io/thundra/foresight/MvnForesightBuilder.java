@@ -22,6 +22,7 @@ import io.thundra.plugin.maven.test.instrumentation.checker.FailsafeChecker;
 import io.thundra.plugin.maven.test.instrumentation.checker.SurefireChecker;
 import jenkins.model.Jenkins;
 import jenkins.tasks.SimpleBuildStep;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;

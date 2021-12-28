@@ -85,6 +85,9 @@ public class ThundraUtils {
                         version, version)).openStream());
 
         FilePath agent = workspace.child(THUNDRA_AGENT_BOOTSTRAP_JAR);
+        if (agent.exists()) {
+            agent.delete();
+        }
         IOUtils.copy(agentStream, agent.write());
         return agent;
 
