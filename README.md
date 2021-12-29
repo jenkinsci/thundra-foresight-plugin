@@ -52,7 +52,10 @@ Enter your Foresight configurations ProjectId and API Key on the **Build Environ
 
 `gradleForesight(projectId:'<Your-Project-Id>', credentialId: '<Your-Credentials-Id>')`
 
-![alt text](images/pipeline.jpg "Pipeline")
+![alt text](images/pipeline_gradle.png "Pipeline for Gradle")
+
+
+![alt text](images/pipeline_maven.png "Pipeline for MAven")
 
 ## LICENSE
 

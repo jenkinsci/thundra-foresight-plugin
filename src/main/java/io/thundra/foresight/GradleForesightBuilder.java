@@ -28,7 +28,10 @@ import org.kohsuke.stapler.QueryParameter;
 
 import javax.xml.stream.XMLStreamException;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -96,28 +99,34 @@ public class GradleForesightBuilder extends Builder implements SimpleBuildStep {
             listener.getLogger().println("Latest Plugin Version : " + pluginVersion);
             final Configuration cfg = getFreemarkerConfiguration();
             final Map<String, String> root = new HashMap<>();
-            root.put(THUNDRA_GRADLE_PLUGIN_VERSION, pluginVersion);
-            root.put(THUNDRA_AGENT_PATH, filePath.toString());
+            String agentPath = filePath.toString();
+            agentPath = launcher.isUnix() ? agentPath : agentPath.replaceAll("\\\\", "\\\\\\\\");
+            root.put(THUNDRA_AGENT_PATH, agentPath);
             root.put(THUNDRA_APIKEY, apiKeyCredentials.getSecret().getPlainText());
             root.put(THUNDRA_AGENT_TEST_PROJECT_ID, projectId);
             String initScriptFile = "thundra.gradle";
             final Template template = cfg.getTemplate(THUNDRAINIT_FTLH);
-            FilePath agent = workspace.child(initScriptFile);
-            final Writer fileOut = new OutputStreamWriter(agent.write(), StandardCharsets.UTF_8);
+            FilePath initGradle = workspace.child(initScriptFile);
+            final Writer fileOut = new OutputStreamWriter(initGradle.write(), StandardCharsets.UTF_8);
             template.process(root, fileOut);
-            File settingsGradle = File.createTempFile("jenkins", "settings.gradle");
-            settingsGradle.deleteOnExit();
-            FilePath settings = workspace.child("settings.gradle");
-            if (!settings.exists()) {
-                settings.touch(System.currentTimeMillis());
+            File buildGradle = File.createTempFile("jenkins", "build.gradle");
+            buildGradle.deleteOnExit();
+            FilePath build = workspace.child("build.gradle");
+            if (!build.exists()) {
+                build.touch(System.currentTimeMillis());
             }
-            try (FileOutputStream out = new FileOutputStream(settingsGradle)) {
-                String includePart = "include('" + initScriptFile + "')\n";
-                out.write(includePart.getBytes(StandardCharsets.UTF_8));
-                settings.copyTo(out);
+            try (FileOutputStream out = new FileOutputStream(buildGradle)) {
+                String buildGradleContent = build.readToString();
+                String initScriptFilePath = initGradle.toString();
+                initScriptFilePath = launcher.isUnix() ? initScriptFilePath : initScriptFilePath.replaceAll("\\\\", "\\\\\\\\");
+                String includePart = "\napply from: '" + initScriptFilePath + "'\n";
+                if (!buildGradleContent.contains(includePart)) {
+                    buildGradleContent += includePart;
+                    Files.write(buildGradle.toPath(), buildGradleContent.getBytes(StandardCharsets.UTF_8), StandardOpenOption.APPEND);
+                }
             }
-            try (FileInputStream in = new FileInputStream(settingsGradle)) {
-                settings.copyFrom(in);
+            try (FileInputStream in = new FileInputStream(buildGradle)) {
+                build.copyFrom(in);
             }
         } catch (XMLStreamException | AgentNotFoundException | PluginNotFoundException | TemplateException e) {
             throw new IOException(e.getMessage());
